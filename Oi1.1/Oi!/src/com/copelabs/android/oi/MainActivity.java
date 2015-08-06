@@ -1,9 +1,8 @@
 
 package com.copelabs.android.oi;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -16,6 +15,13 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.WifiP2pManager.ActionListener;
 import android.net.wifi.p2p.WifiP2pManager.Channel;
 import android.net.wifi.p2p.WifiP2pManager.ChannelListener;
+import android.net.wifi.p2p.WifiP2pManager.DnsSdServiceResponseListener;
+import android.net.wifi.p2p.WifiP2pManager.DnsSdTxtRecordListener;
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
+
+
+
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
@@ -25,8 +31,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+
+
+
 import com.copelabs.android.oi.DeviceListFragment.DeviceActionListener;
 import com.example.android.wifidirect.R;
+import com.copelabs.android.oi.DeviceListFragment;
+
 
 /**
  * An activity that uses WiFi Direct APIs to discover and connect with available
@@ -45,7 +56,16 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
     private final IntentFilter intentFilter = new IntentFilter();
     private Channel channel;
     private BroadcastReceiver receiver = null;
-    public Socket client;
+    private WifiP2pDnsSdServiceRequest serviceRequest;
+    WifiP2pDnsSdServiceInfo serviceInfo;
+        
+    
+    public static final String TXTRECORD = "available";
+    public static final String INTEREST = "Cars";
+    public static final String SERVICE_INSTANCE = "_oidemo";
+    public static final String SERVICE_REG_TYPE = "_presence._tcp";
+    
+    
 
     /**
      * @param isWifiP2pEnabled the isWifiP2pEnabled to set
@@ -68,6 +88,7 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
+        startRegistrationAndDiscovery();
     }
 
     /** register the BroadcastReceiver with the intent values to be matched */
@@ -83,6 +104,90 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
         super.onPause();
         unregisterReceiver(receiver);
     }
+    
+    
+    /**
+     * Registers a local service and then initiates a service discovery
+     */
+    private void startRegistrationAndDiscovery() {
+        Map<String, String> record = new HashMap<String, String>();
+        record.put(TXTRECORD, "visible");
+        record.put(INTEREST, "visible");
+
+        this.serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(SERVICE_INSTANCE, SERVICE_REG_TYPE, record);
+        this.manager.addLocalService(this.channel, this.serviceInfo, new WifiP2pManager.ActionListener() 
+        {
+            @Override
+            public void onSuccess() {
+    //            appendStatus("Added Local Service");
+            }
+            @Override
+            public void onFailure(int error) {
+  //              appendStatus("Failed to add a service");
+            }
+        });
+        discoverService();
+    }
+    
+    
+    private void discoverService() {
+
+        this.manager.setDnsSdResponseListeners(this.channel, new DnsSdServiceResponseListener() {
+
+                    @Override
+                    public void onDnsSdServiceAvailable(String instanceName, String registrationType, WifiP2pDevice srcDevice) 
+                    {
+                   	
+                    }
+                }, new DnsSdTxtRecordListener() {
+                   
+                    @Override
+                    public void onDnsSdTxtRecordAvailable(String fullDomainName, Map<String, String> record, WifiP2pDevice device) {
+                    	Toast.makeText(MainActivity.this, "onDnsSdTxtRecordAvailable " + fullDomainName + " device " + device.deviceName + " record: " + fullDomainName.toString(), 1).show();
+                    	String str1=(String)record.get(INTEREST);
+                        Log.d(TAG, device.deviceName + " is " + record.get(TXTRECORD));
+                    }
+                });
+
+        // After attaching listeners, create a service request and initiate
+        // discovery.
+        this.serviceRequest = WifiP2pDnsSdServiceRequest.newInstance(SERVICE_INSTANCE, SERVICE_REG_TYPE);
+        this.manager.addServiceRequest(this.channel, this.serviceRequest, new ActionListener() {
+
+                    @Override
+                    public void onSuccess() {
+                    	Log.d("oidemo", "ServiceRequest yes");
+ //                       appendStatus("Added service discovery request");
+                    }
+
+                    @Override
+                    public void onFailure(int arg0) {
+                    	Log.d("oidemo", "Not ServiceRequest onfailure " + arg0);
+//                        appendStatus("Failed adding service discovery request");
+                    }
+                });
+        this.manager.discoverServices(this.channel, new ActionListener() {
+
+            @Override
+            public void onSuccess() {
+            	Log.d("oidemo", "Service discovery initiated");
+//                appendStatus("Service discovery initiated");
+            }
+
+            @Override
+            public void onFailure(int arg0) {
+            	Log.d("oidemo", "Service discovery failed");
+//                appendStatus("Service discovery failed");
+
+            }
+        });
+    }
+
+    
+    
+    
+    
+    
 
     /**
      * Remove all peers and clear all fields. This is called on
@@ -108,10 +213,6 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
         return true;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
-     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -143,6 +244,7 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
                     public void onSuccess() {
                         Toast.makeText(MainActivity.this, "Discovery Initiated",
                                 Toast.LENGTH_SHORT).show();
+                        startRegistrationAndDiscovery();
                     }
 
                     @Override
@@ -164,6 +266,7 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
         fragment.showDetails(device);
 
     }
+    
 
     @Override
     public void connect(WifiP2pConfig config) {
@@ -171,21 +274,7 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 
             @Override
             public void onSuccess() {
-                // WiFiDirectBroadcastReceiver will notify us. Ignore for now.
-//            	ServerSocket serverSocket;
-//				try {
-//					serverSocket = new ServerSocket(8988);
-//					serverSocket.setReuseAddress(true);
-//					Log.d(MainActivity.TAG, "Server: Socket opened");
-//	                client = serverSocket.accept();
-//
-//				} catch (IOException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//                
-                //serverSocket.bind(new InetSocketAddress(8988));
-                
+            	
             }
 
             @Override
