@@ -21,4 +21,5 @@
             android:layout_below="@+id/frag_list">
             <!-- Preview: layout=@layout/device_detail -->
         </fragment>
+        
     </RelativeLayout>
