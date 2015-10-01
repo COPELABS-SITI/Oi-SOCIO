@@ -21,26 +21,16 @@ public class WiFiDirect extends BroadcastReceiver {
     private WifiP2pManager manager;
     private Channel channel;
     private MainActivity activity;
+    public static String myMac;
 
-    /**
-     * @param manager WifiP2pManager system service
-     * @param channel Wifi p2p channel
-     * @param activity activity associated with the receiver
-     */
-    public WiFiDirect(WifiP2pManager manager, Channel channel,
-            MainActivity activity) {
+    public WiFiDirect(WifiP2pManager manager, Channel channel, MainActivity activity) {
         super();
         this.manager = manager;
         this.channel = channel;
         this.activity = activity;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see android.content.BroadcastReceiver#onReceive(android.content.Context,
-     * android.content.Intent)
-     */
-    @Override
+        @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
@@ -57,7 +47,9 @@ public class WiFiDirect extends BroadcastReceiver {
             }
             Log.d(MainActivity.TAG, "P2P state changed - " + state);
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
+        	
 
+            
             // request available peers from the wifi p2p manager. This is an
             // asynchronous call and the calling activity is notified with a
             // callback on PeerListListener.onPeersAvailable()
@@ -88,6 +80,11 @@ public class WiFiDirect extends BroadcastReceiver {
                 activity.resetData();
             }
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
+        	
+        	WifiP2pDevice device=(WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE);
+            myMac=device.deviceAddress;
+          
+          Log.d(MainActivity.TAG, "Device WiFi P2p MAC Address: " + myMac);
             DeviceListFragment fragment = (DeviceListFragment) activity.getFragmentManager()
                     .findFragmentById(R.id.frag_list);
             fragment.updateThisDevice((WifiP2pDevice) intent.getParcelableExtra(

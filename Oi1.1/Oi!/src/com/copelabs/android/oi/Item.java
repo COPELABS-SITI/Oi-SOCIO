@@ -40,7 +40,7 @@ public class Item {
 	 private String deviceReceiver;
 	 // emails
 	 private String nameSender="";
-     private String nameReceiver="";
+     public static String nameReceiver="";
      //message content
      private String message="";
      //timestamp for sending the message
