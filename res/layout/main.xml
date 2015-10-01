@@ -16,10 +16,34 @@
         <fragment
             class="com.copelabs.android.oi.DeviceDetailFragment"
             android:id="@+id/frag_detail"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_below="@+id/frag_list">
             <!-- Preview: layout=@layout/device_detail -->
         </fragment>
+        <Spinner
+      	    	android:id="@+id/contacts"
+      	    	android:layout_width="match_parent"
+      	    	android:layout_height="wrap_content"
+      	    	android:layout_below="@+id/frag_detail"
+      	    	android:spinnerMode="dropdown"/>
+        <EditText 
+                android:id="@+id/edit_msg"
+        		android:layout_width="wrap_content"
+        		android:layout_height="wrap_content"
+        		android:hint="@string/edit_message"   
+        		android:layout_below="@+id/contacts"
+        		android:inputType="textAutoComplete"  >
+      	</EditText>
+      	<Button
+          		 android:id="@+id/sendTo"
+          		 android:layout_width="fill_parent"
+          		 android:layout_height="wrap_content"
+          		 android:layout_alignTop="@+id/edit_msg"
+          		 android:layout_alignBottom="@+id/edit_msg"
+           		 android:layout_toRightOf="@+id/edit_msg"
+           		 android:text="@string/pick_friend" />
+      	
+      			
         
     </RelativeLayout>
