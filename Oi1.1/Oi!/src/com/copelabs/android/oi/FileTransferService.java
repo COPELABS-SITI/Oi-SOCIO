@@ -25,8 +25,10 @@ import java.util.Enumeration;
  * socket connection with the WiFi Direct Group Owner and writing the file
  */
 public class FileTransferService extends IntentService {
+	
 
-    private static final int SOCKET_TIMEOUT = 5000;
+	public static final String TAG = "FileTransferService";
+    private static final int SOCKET_TIMEOUT = 500;
     public static final String ACTION_SEND_FILE = "com.example.android.wifidirect.SEND_FILE";
     public static final String EXTRAS_FILE_PATH = "file_url";
     public static final String HOST_ADDRESS = "go_host";
@@ -40,35 +42,6 @@ public class FileTransferService extends IntentService {
         super("FileTransferService");
     }
     
-//    private byte[] getLocalIPAddress() {
-//        try { 
-//            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) { 
-//                NetworkInterface intf = en.nextElement(); 
-//                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) { 
-//                    InetAddress inetAddress = enumIpAddr.nextElement(); 
-//                     
-//                } 
-//            } 
-//        } catch (SocketException ex) { 
-//            //Log.e("AndroidNetworkAddressFactory", "getLocalIPAddress()", ex); 
-//        } catch (NullPointerException ex) { 
-//            //Log.e("AndroidNetworkAddressFactory", "getLocalIPAddress()", ex); 
-//        } 
-//        return null; 
-//    }
-//
-//    private String getDottedDecimalIP(byte[] ipAddr) {
-//        //convert to dotted decimal notation:
-//        String ipAddrStr = "";
-//        for (int i=0; i<ipAddr.length; i++) {
-//            if (i > 0) {
-//                ipAddrStr += ".";
-//            }
-//            ipAddrStr += ipAddr[i]&0xFF;
-//        }
-//        return ipAddrStr;
-//    }
-//
     
     /*
      * (non-Javadoc)
@@ -86,32 +59,37 @@ public class FileTransferService extends IntentService {
             
             String host = intent.getExtras().getString(HOST_ADDRESS);
             Socket socket = new Socket();
-            
+            Log.d(TAG, "Client Socket Created");
             int port = intent.getExtras().getInt(HOST_PORT);
+            Log.d(TAG, "Host Address: "+host+"& Port: "+port);
 
             try {
-                Log.d(MainActivity.TAG, "Opening client socket - ");
-                socket.bind(null);
+            	Log.d(TAG, "Socket Connecting");
                 socket.setReuseAddress(true);
+                Log.d(TAG, "Client Socket isConnected- " + socket.isConnected());
+                
                 socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
-
-                Log.d(MainActivity.TAG, "Client socket - " + socket.isConnected());
+                Log.d(TAG, "Client Socket isConnected- " + socket.isConnected());
                 OutputStream stream = socket.getOutputStream();
+                Log.d(TAG, "Received Data from OutputSteram of Socket");
                 ContentResolver cr = context.getContentResolver();
                 InputStream is = null;
                 try {
                     is = cr.openInputStream(Uri.parse(fileUri));
                 } catch (FileNotFoundException e) {
-                    Log.d(MainActivity.TAG, e.toString());
+                    Log.d(TAG, e.toString());
                 }
                 DeviceDetailFragment.copyFile(is, stream);
-                Log.d(MainActivity.TAG, "Client: Data written");
+                Log.d(TAG, "Client: Data written");
+                
+                
             } catch (IOException e) {
-                Log.e(MainActivity.TAG, e.getMessage());
+                Log.e(TAG, e.getMessage());
             } finally {
                    if (socket!=null) {
                         try {
                             socket.close();
+                            Log.d(TAG, "Client Socket Closed");
                         } catch (IOException e) {
                             // Give up
                             e.printStackTrace();
