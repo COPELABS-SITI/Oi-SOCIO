@@ -1,18 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="fill_parent"
-    android:layout_height="fill_parent">
-    <LinearLayout android:layout_width="match_parent" android:id="@+id/linearLayout1"
-        android:layout_height="fill_parent" android:orientation="horizontal">
-        <fragment class="com.copelabs.android.oi.DeviceListFragment"
-            android:id="@+id/frag_list" android:layout_width="@dimen/tablet_list_width"
-            android:layout_height="match_parent">
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:id="@+id/linearLayout1"
+        android:layout_height="match_parent"
+        android:orientation="vertical" >
+        
+        <fragment
+            class="com.copelabs.android.oi.DeviceListFragment"
+            android:id="@+id/frag_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true">
+            
             <!-- Preview: layout=@layout/row_devices -->
         </fragment>
-        <fragment class="com.copelabs.android.oi.DeviceDetailFragment"
-            android:id="@+id/frag_detail" android:layout_width="match_parent"
-            android:layout_height="match_parent">
+        
+        <Spinner
+      	    	android:id="@+id/contactSpinner"
+      	    	android:layout_width="match_parent"
+      	    	android:layout_height="wrap_content"
+      	    	android:layout_below="@+id/frag_list"
+      	    	android:gravity="center"/>
+        
+        <EditText 
+                android:id="@+id/edit_msg"
+        		android:layout_width="280dp"
+        		android:layout_height="wrap_content"
+        		android:hint="@string/edit_message"   
+        		android:layout_below="@+id/contactSpinner"
+        		android:inputType="textAutoComplete"
+        		 
+        		 >
+      	</EditText>
+      	<Button
+          		 android:id="@+id/sendTo"
+          		 android:layout_width="match_parent"
+          		 android:layout_height="wrap_content"
+          		 android:layout_alignTop="@+id/edit_msg"
+          		 android:layout_alignBottom="@+id/edit_msg"
+           		 android:layout_toRightOf="@+id/edit_msg"
+           		 android:text="@string/pick_friend"
+           		 />
+        
+        
+        <fragment
+            class="com.copelabs.android.oi.DeviceDetailFragment"
+            android:id="@+id/frag_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/edit_msg"
+            
+            >
             <!-- Preview: layout=@layout/device_detail -->
         </fragment>
-    </LinearLayout>
-</LinearLayout>
+         
+         <fragment
+      		  android:id="@+id/frag_receiver"
+      		  android:layout_below="@+id/frag_detail"
+        	  android:layout_width="match_parent"
+        	  android:layout_height="wrap_content"
+        	  
+        	 
+        	  class="com.copelabs.android.oi.FragmentOiReceiver" />
+    </RelativeLayout>
