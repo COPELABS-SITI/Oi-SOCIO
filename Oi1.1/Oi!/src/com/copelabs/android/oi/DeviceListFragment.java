@@ -36,14 +36,15 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.example.android.wifidirect.R;
+import com.copelabs.android.oi.R;
 
 /**
  * A ListFragment that displays available peers on discovery and requests the
  * parent activity to handle user interaction events
  */
 public class DeviceListFragment extends ListFragment implements PeerListListener {
-
+	
+	public static final String TAG = "DeviceListFragment";
     private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     ProgressDialog progressDialog = null;
     View mContentView = null;
@@ -70,7 +71,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
     }
 
     private static String getDeviceStatus(int deviceStatus) {
-        Log.d(MainActivity.TAG, "Peer status :" + deviceStatus);
+        Log.d(TAG, "Peer Status :" + deviceStatus);
         switch (deviceStatus) {
             case WifiP2pDevice.AVAILABLE:
                 return "Available";
@@ -98,6 +99,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = device.deviceAddress;
         config.wps.setup = WpsInfo.PBC;
+        config.groupOwnerIntent = 0;
         ((DeviceActionListener) getActivity()).connect(config);
     }
 
@@ -157,7 +159,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         peers.addAll(peerList.getDeviceList());
         ((WiFiPeerListAdapter) getListAdapter()).notifyDataSetChanged();
         if (peers.size() == 0) {
-            Log.d(MainActivity.TAG, "No devices found");
+            Log.d(TAG, "No devices found");
             return;
         }
 
