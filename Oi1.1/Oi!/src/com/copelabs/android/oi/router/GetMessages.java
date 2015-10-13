@@ -26,8 +26,8 @@ public class GetMessages {
 	public static List<GetMessages> getMsg(){
 	List<GetMessages> msgList=new ArrayList<GetMessages>();
 	
-	GetMessages u1=new GetMessages(1,"78:F7:BE:C8:3D:97");
-	GetMessages u2=new GetMessages(2,"8a:32:9b:c4:2c:07");
+	GetMessages u1=new GetMessages(1,"8a:32:9b:c4:2c:07");
+	GetMessages u2=new GetMessages(2,"7a:4b:87:f4:b3:72");
 	
 	msgList.add(u1);
 	msgList.add(u2);
