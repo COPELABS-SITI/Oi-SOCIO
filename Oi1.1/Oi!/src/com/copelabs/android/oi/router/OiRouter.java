@@ -10,6 +10,7 @@ import android.content.Context;
 import android.util.Log;
 
 public class OiRouter {
+	public static final String TAG = "OiRouter";
 	
 	
 	public OiRouter (Context context) {
@@ -29,24 +30,21 @@ public class OiRouter {
 		
 		String macAddressOfPeer=macAddressPeer;
 		
-		Log.d(MainActivity.TAG,"In OiRouter Class");
-		
-		
-		Log.d(MainActivity.TAG,"swFromDevice : "+swFromDevice);
-		Log.d(MainActivity.TAG,"swOfReceivedPeer : "+swOfReceivedPeer);
-		Log.d(MainActivity.TAG,"macAddressOfPeer : "+macAddressOfPeer);
+		Log.d(TAG,"swFromDevice : "+swFromDevice);
+		Log.d(TAG,"swOfReceivedPeer : "+swOfReceivedPeer);
+		Log.d(TAG,"macAddressOfPeer : "+macAddressOfPeer);
 		
 		for(int a=0; a<listofmsg.size();a++)
 		{
-		Log.d(MainActivity.TAG,"Meaasge "+a+" : "+listofmsg.get(a).msgDest);
+		Log.d(TAG,"Meaasge "+a+" : "+listofmsg.get(a).msgDest);
 		}
 		
 		for(int x=0;x<listofmsg.size();x++)
 		{
-			Log.d(MainActivity.TAG,"listofmsg.get(x).msgDest: "+listofmsg.get(x).msgDest);
-			Log.d(MainActivity.TAG,"swFromDevice.get(listofmsg.get(x).msgDest): "+swFromDevice.get(listofmsg.get(x).msgDest));
-			Log.d(MainActivity.TAG,"swOfReceivedPeer.get(listofmsg.get(x).msgDest): "+swOfReceivedPeer.get(listofmsg.get(x).msgDest));
-			Log.d(MainActivity.TAG,"Value of X : "+x);
+			Log.d(TAG,"listofmsg.get(x).msgDest: "+listofmsg.get(x).msgDest);
+			Log.d(TAG,"swFromDevice.get(listofmsg.get(x).msgDest): "+swFromDevice.get(listofmsg.get(x).msgDest));
+			Log.d(TAG,"swOfReceivedPeer.get(listofmsg.get(x).msgDest): "+swOfReceivedPeer.get(listofmsg.get(x).msgDest));
+			Log.d(TAG,"Value of X : "+x);
 			if(listofmsg.get(x).msgDest.equals(macAddressOfPeer) )
 			{
 				Log.d(MainActivity.TAG,"Value of X in first if condition: "+x);
@@ -58,16 +56,16 @@ public class OiRouter {
 			
 			else if (Double.parseDouble(swFromDevice.get(listofmsg.get(x).msgDest)) < Double.parseDouble(swOfReceivedPeer.get(listofmsg.get(x).msgDest)))
 			{
-				Log.d(MainActivity.TAG,"Value of X in second if condition: "+x);
+				Log.d(TAG,"Value of X in second if condition: "+x);
 				msgtobesent.add(listofmsg.get(x).msgId);
-				Log.d(MainActivity.TAG,"Added msgId: "+listofmsg.get(x).msgId);
+				Log.d(TAG,"Added msgId: "+listofmsg.get(x).msgId);
 				
 			}
 			
 		}
 	
 	
-		Log.e(MainActivity.TAG, "In OiRouter class. Msg to be sent: "+msgtobesent.toString());
+		Log.e(TAG, "In OiRouter class. Msg to be sent: "+msgtobesent.toString());
 		
 		return(msgtobesent);
 	}
