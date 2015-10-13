@@ -2,16 +2,18 @@
 package com.copelabs.android.oi;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.http.impl.entity.StrictContentLengthStrategy;
+import java.util.Random;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -19,8 +21,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
+import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.WifiP2pManager.ActionListener;
 import android.net.wifi.p2p.WifiP2pManager.Channel;
@@ -29,11 +34,9 @@ import android.net.wifi.p2p.WifiP2pManager.DnsSdServiceResponseListener;
 import android.net.wifi.p2p.WifiP2pManager.DnsSdTxtRecordListener;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
-
-
-
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
@@ -56,9 +59,6 @@ import com.copelabs.android.oi.DeviceListFragment.DeviceActionListener;
 import com.copelabs.android.oi.router.GetMessages;
 import com.copelabs.android.oi.router.OiRouter;
 
-import com.example.android.wifidirect.R;
-import com.copelabs.android.oi.DeviceListFragment;
-
 
 /**
  * An activity that uses WiFi Direct APIs to discover and connect with available
@@ -69,8 +69,9 @@ import com.copelabs.android.oi.DeviceListFragment;
  */
 public class MainActivity extends Activity implements ChannelListener, DeviceActionListener {
 
-    public static final String TAG = "oidemo";
+    public static final String TAG = "OiDemo";
     private WifiP2pManager manager;
+    private WifiP2pInfo info;
     private boolean isWifiP2pEnabled = false;
     private boolean retryChannel = false;
 
@@ -79,6 +80,7 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
     private BroadcastReceiver receiver = null;
     private WifiP2pDnsSdServiceRequest serviceRequest;
     WifiP2pDnsSdServiceInfo serviceInfo;
+    public boolean connection=false;
         
     
     public static final String TXTRECORD = "available";
@@ -88,8 +90,18 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
     public static final String SERVICE_INSTANCE = "_oidemo";
     public static final String SERVICE_REG_TYPE = "_presence._tcp";
     
+    Spinner dropdownContacts;    
     public String friend="";
+    private String mac;
     
+    int min = 10000;
+    int max = 20000;
+
+    Random r = new Random();
+    int i1 = r.nextInt(max - min + 1) + min;
+    
+    ArrayList<HashMap<String, String>> record = new ArrayList<HashMap<String, String>>();
+    HashMap<String,String> wsd = new HashMap<String, String>();
     
     EditText mMessage;
     Button mButtonSendTo;
@@ -101,19 +113,74 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
     
     public static final HashMap<String, String> myDev = new HashMap<String, String>();
     
+    private Handler msgHandler =new Handler();
     
-
+    
+    
+    private Runnable msgTransfer= new Runnable() {
+		
+		@Override
+		public void run() {
+			if(connection==true){
+				
+					Log.d(TAG, "Peer connected(From the runnable)");
+					sendFile();
+					File x=lastFileModified();
+					try {
+						readFile(x);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				
+				
+			}else{
+			try {
+				connectToDest(readMAC());
+				File x=lastFileModified();
+				readFile(x);
+				while(connection==true){
+					Log.d(TAG, "Peer connected(From the runnable)");
+					
+					sendFile();
+					
+					
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+			
+			msgHandler.postDelayed(this, i1);
+				
+	}
+	};
+	
+	 
+        
     /**
      * @param isWifiP2pEnabled the isWifiP2pEnabled to set
      */
     public void setIsWifiP2pEnabled(boolean isWifiP2pEnabled) {
         this.isWifiP2pEnabled = isWifiP2pEnabled;
     }
+    
+    public void setConnection(boolean connection){
+    	this.connection=connection;
+    }
+    
+    
+	
+	
+	
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+        Log.d(TAG, "Test Main Activity onCreate");
+        
 
         // add necessary intent values to be matched.
 
@@ -124,39 +191,47 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
+        
+        /* To auto-accept WiFi-Direct Connection Request. */
+        WiFiDirectAutoAccept mAccept = new WiFiDirectAutoAccept(getApplicationContext());
+        mAccept.intercept(true);
+        
+        mac=getWFDMacAddress();
+            Log.d(TAG, "Test WiFiDirect MAC: "+mac);
         startRegistrationAndDiscovery();
+            
+        List<String> contactItems=new ArrayList<String>();
         
-        Spinner dropdown=(Spinner)findViewById(R.id.contacts);
-        ArrayList<String> contactItems=new ArrayList<String>();
-        
-        for (int a=0;a<GetMessages.getMsg().size();a++)
+        int b=0;
+        while(b<GetMessages.getMsg().size())
         {
-        contactItems.add(GetMessages.getMsg().get(a).getMsgDest());
+        	contactItems.add(GetMessages.getMsg().get(b).getMsgDest());
+        	b++;
         }
-        Log.d(TAG,"Contacts in dropdown: "+contactItems.toString());
         
-        ArrayAdapter<String> adapter=new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, contactItems);
-        dropdown.setAdapter(adapter);
+        Log.d(TAG,"Contacts in Dropdown: "+contactItems.toString());
+        ArrayAdapter<String> adapter=new ArrayAdapter<String>(getBaseContext(), android.R.layout.simple_spinner_dropdown_item, contactItems);
+        this.dropdownContacts=(Spinner)findViewById(R.id.contactSpinner);
+        dropdownContacts.setAdapter(adapter);
         
-        
-        dropdown.setOnItemSelectedListener(new OnItemSelectedListener() {
+        dropdownContacts.setOnItemSelectedListener(new OnItemSelectedListener() {
         	@Override
         	public void onItemSelected(AdapterView<?> parent, View view, int position, long arg3) {
+        		TextView myText=(TextView)view;
+        		Log.d(TAG, "To select contact");
                 // On selecting a spinner item
-        		friend = parent.getItemAtPosition(position).toString();
-            // Showing selected spinner item
-        //Toast.makeText(parent.getContext(), "You selected: " + friend,Toast.LENGTH_LONG).show();
-        Log.d(TAG,"You Selected: "+friend.toString());
-        
-        
+        		friend = myText.getText().toString();
+        		Log.d(TAG,"You Selected: "+friend);
             }
 
 			@Override
 			public void onNothingSelected(AdapterView<?> parent) {
 				// TODO Auto-generated method stub
+				Log.d(TAG, "Nothing selected as contact");
 				
 			}
 		});
+        
         
         mMessage=(EditText)findViewById(R.id.edit_msg);
         mButtonSendTo=(Button)findViewById(R.id.sendTo);
@@ -165,27 +240,58 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 			        {
 			            public void onClick(View view)
 			            {
-			              //  Log.v("Message", mMessage.getText().toString()+mMail.getText().toString());
 			                try {
 								writeFile(mMessage.getText().toString(),friend);
 								Log.d(TAG,"File created with destination: "+friend.toString());
+								Log.d(TAG, "Connecting to Destination: "+readMAC());
+								msgTransfer.run();
+								
+								
+								
+							//	receivedMsg.run();
+								
+			//					if(connection==true)
+			//					{
+			//						sendFile();
+			//					}
+			//					else
+			//					connectToDest(readMAC());
+								
+								
+//								File file = new File(Environment.getExternalStorageDirectory().toString()+"/Oi1.1","OiSending.xml");
+//								Uri uri= Uri.fromFile(file);
+//								Log.d(TAG, "Test File(To be sent) path: "+uri);
+							//	Log.d(TAG, "Test info.GroupOwner"+info.groupOwnerAddress.toString());
+								
+//								Log.d(TAG, "Test connection before while: "+connection);
+								
+			//					while (connection==true) 
+			//					{
+			//						Log.d(TAG, "Test connection: "+connection);
+									//Log.d(TAG, "Test inside while");
+									//Log.d(TAG, "Test GO Inet address"+DeviceDetailFragment.info.groupOwnerAddress.getHostAddress().toString());
+//									while(DeviceDetailFragment.info.groupFormed)
+//									{
+			//						sendFile();
+			//						break;
+			//						}
+//								};
+																	
 								
 							} catch (IOException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
-			       //         Toast.makeText(MainActivity.this, "message queued to be sent!",Toast.LENGTH_SHORT).show();
-		                    
 			            }
 			        });
         
-        getListFiles();
-        try {
-			readFile();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+ //       getListFiles();
+//        try {
+//			readFile();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
         
         
         
@@ -194,16 +300,58 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
     
     
     
+    public void sendFile(){
+    	while(DeviceDetailFragment.info.groupFormed)
+    	{
+    	File file = new File(Environment.getExternalStorageDirectory().toString()+"/Oi1.1"+"/Sent","OiSending.xml");
+		Uri uri= Uri.fromFile(file);
+		Log.d(TAG, "File(To be sent) path: "+uri);
+    	Intent serviceIntent = new Intent(getApplicationContext(), FileTransferService.class);
+        serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
+        serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
+        serviceIntent.putExtra(FileTransferService.HOST_ADDRESS,DeviceDetailFragment.info.groupOwnerAddress.getHostAddress());
+        Log.d(TAG, "GroupOwner Address: "+DeviceDetailFragment.info.groupOwnerAddress.getHostAddress().toString());
+        Log.d(TAG, "Passing GroupOwner Address To Host Address");
+        
+        if(DeviceDetailFragment.info.isGroupOwner)
+        {
+        serviceIntent.putExtra(FileTransferService.HOST_ADDRESS,DeviceDetailFragment.mClientAdd.getHostAddress());
+        Log.d(TAG, "Client Address:"+DeviceDetailFragment.mClientAdd.getHostAddress().toString());
+        serviceIntent.putExtra(FileTransferService.HOST_PORT, 8988);
+        }
+        else{
+        	Log.d(TAG, "Sending to Group Owner:"+DeviceDetailFragment.info.groupOwnerAddress.getHostAddress().toString());
+        	serviceIntent.putExtra(FileTransferService.HOST_ADDRESS, DeviceDetailFragment.info.groupOwnerAddress.getHostAddress());
+        	serviceIntent.putExtra(FileTransferService.HOST_PORT, 8988);
+        	}
+        startService(serviceIntent);
+        
+        break;
+    	}
+    	
+    }
+    
+    /* Initiate Peer Connection to a Specific Node*/
+    public void connectToDest(String mac)
+    {
+    	String peer=mac;
+    	Log.d(TAG, "Peer Address To Connect"+peer);
+    	WifiP2pConfig config = new WifiP2pConfig();
+        config.deviceAddress = peer;
+        config.wps.setup = WpsInfo.PBC;
+        config.groupOwnerIntent = 0;
+        connect(config);
+     }
     
     
 
-    /** register the BroadcastReceiver with the intent values to be matched */
+    /** Register the BroadcastReceiver with the intent values to be matched */
     @Override
     public void onResume() {
         super.onResume();
         receiver = new WiFiDirect(manager, channel, this);
         registerReceiver(receiver, intentFilter);
-        startRegistrationAndDiscovery();
+  //      startRegistrationAndDiscovery();
     }
 
     @Override
@@ -215,35 +363,22 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
     
         
     
-    /**
-     * Registers a local service and then initiates a service discovery
-     */
+    
+     /* Registers a local service and then initiates a service discovery */
       private void startRegistrationAndDiscovery() {
     	
-
-        //	double sw1=5.0;
+    	  //	double sw1=5.0;
         	// For Usense1
         	myDev.put("8a:32:9b:c4:2c:07", "5.0");
         	
+        	
         	// For Usense2
          // myDev.put("8a:32:9b:c4:2c:07","10.0");
-    	
-       
+        
     	Map<String, String> record = new HashMap<String, String>();
         record.put(BluetoothAdapter.getDefaultAdapter().getAddress(), "-1.1");
-        record.put("8a:32:9b:c4:2c:07", "10.1");
-    //    record.put("8b:32:9b:c4:2c:07", "25.1");
-    //    record.put("8c:32:9b:c4:2c:07", "35.1");
-        // Only 4 records are transmitted in the announcement
-    //    record.put("8d:32:9b:c4:2c:07", "5.0");
-    //    record.put("8e:32:9b:c4:2c:07", "5.0");
-    //    record.put("8f:32:9b:c4:2c:07", "5.0");
-    //    record.put("8g:32:9b:c4:2c:07", "5.0");
-    //    record.put("8h:32:9b:c4:2c:07", "5.0");
-    //    record.put("8i:32:9b:c4:2c:07", "5.0");
-        
-        
-             
+        record.put(mac, "10.1");
+        Log.d(TAG, "MAC to Send in Service Registration: "+mac);
         
         this.serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(SERVICE_INSTANCE, SERVICE_REG_TYPE, record);
         this.manager.addLocalService(this.channel, this.serviceInfo, new WifiP2pManager.ActionListener() 
@@ -327,38 +462,36 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
                     	newRecord.clear();
                     	newRecord.putAll(record);
                     	
-                    	
-                    	Log.d(TAG, "The arrived record contains:" + newRecord.keySet().toString());
+                    	Log.d(TAG, "The Arrived Record Contains:" + newRecord.keySet().toString());
                     	
                     	
                      }
                 });
 
-        // After attaching listeners, create a service request and initiate
-        // discovery.
+        /* After attaching listeners, create a service request and initiate Discovery */
         this.serviceRequest = WifiP2pDnsSdServiceRequest.newInstance(SERVICE_INSTANCE, SERVICE_REG_TYPE);
         this.manager.addServiceRequest(this.channel, this.serviceRequest, new ActionListener() {
 
                     @Override
                     public void onSuccess() {
-                    	Log.d("oidemo", "ServiceRequest yes");
+                    	Log.d(TAG, "ServiceRequest yes");
                     }
 
                     @Override
                     public void onFailure(int arg0) {
-                    	Log.d("oidemo", "Not ServiceRequest onfailure " + arg0);
+                    	Log.d(TAG, "ServiceRequest onfailure " + arg0);
                     }
                 });
         this.manager.discoverServices(this.channel, new ActionListener() {
 
             @Override
             public void onSuccess() {
-            	Log.d("oidemo", "Service discovery initiated");
+            	Log.d(TAG, "Service discovery initiated");
             }
 
             @Override
             public void onFailure(int arg0) {
-            	Log.d("oidemo", "Service discovery failed");
+            	Log.d(TAG, "Service discovery failed");
             }
         });
     }
@@ -390,22 +523,21 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 	public void writeFile(String message, String nameReceiver) throws IOException {
 		// stores the message to be sent
 		Item OiMessage = new Item(getApplicationContext());
-		Log.d("main Write File mac address is", OiMessage.getDeviceSender());
+		Log.d("Main Write File mac address is", OiMessage.getDeviceSender());
 		String recordOiMessage="";
 		//time stamp for the message
 		double currentTime=System.currentTimeMillis();
 		byte[] contentInBytes;
 		
-		File folder=new File(Environment.getExternalStorageDirectory().toString()+"/Oi1.1");
+		File folder=new File(Environment.getExternalStorageDirectory().toString()+"/Oi1.1"+"/Sent");
 		folder.mkdir();
 		String dirPath=folder.toString();
-		Log.v("Path: ", Environment.getExternalStorageDirectory()+"/Oi1.1");
+		Log.v("Path: ", Environment.getExternalStorageDirectory()+"/Oi1.1"+"/Sent");
         File file = new File(dirPath,"OiSending.xml");
         
         Log.v("Files stored in", dirPath);
-        
-   //     Log.v("Files stored in", getFilesDir().getAbsolutePath()+"/Oi1.1");
-        //grabs text for the message content
+   
+        // Grabs text for the message content
         Log.d("Main Write File", "2");
         OiMessage.setAttributes("nomac", nameReceiver,message, currentTime);
         
@@ -453,10 +585,10 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
         	} catch (IOException e) {
         	e.printStackTrace();
         	}
-        TextView view = (TextView) findViewById(R.id.edit_message);
-        view.setText(R.string.empty);
-        view = (TextView) findViewById(R.id.friend_by_mail);
-        view.setText(R.string.empty);
+//        TextView view = (TextView) findViewById(R.id.edit_message);
+//        view.setText(R.string.empty);
+//        view = (TextView) findViewById(R.id.friend_by_mail);
+//        view.setText(R.string.empty);
     
 	}
 	
@@ -471,7 +603,7 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 	 */
 
 	
-	public void readFile() throws IOException {
+	public void readFile(File input) throws IOException {
 		XmlPullParserHandler Messages = new XmlPullParserHandler();
 		
 		Item OiMsg=new Item(getApplicationContext());
@@ -479,7 +611,7 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 		
 		//getFilesDir is /data/data/com.example.oi/Files
 		//@TODO File file = new File(getFilesDir(),"OiReceiving.xml");	
-		File file = new File(Environment.getExternalStorageDirectory().toString()+"/Oi1.1");	
+		File file = input;	
 		
 		try {
 		    FileInputStream fin = new FileInputStream(file);
@@ -495,20 +627,93 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 		  }catch(IOException e) {
 	        	e.printStackTrace();
 	        	} 
-	//	TextView t = (TextView)findViewById(R.id.receivedMsg);
+		TextView t = (TextView)findViewById(R.id.receivedMsg);
 		for (int i=0; i<OiMessages.size();i=i+1){
 			OiMsg=OiMessages.get(i);
 			OiMsgFormat=OiMsg.getMessage();
 			Log.v("message read\n",OiMsgFormat);
 			Log.v("message destination\n",OiMsg.nameReceiver);
-	//		t.append(OiMsgFormat);
-	//		t.append("\n.................\n");
+			t.append(OiMsgFormat);
+			t.append("\n--------------------\n");
 			
 		}
 	
 		
 	}
+	
+	
+	public static File lastFileModified() {
+        File fl = new File(Environment.getExternalStorageDirectory().toString()+"/Oi1.1"+"/Received");
+        File[] f1 = fl.listFiles(new FileFilter() {
+            public boolean accept(File f1) {
+                return f1.isFile();
+            }
+        });
+        long lastMod = Long.MIN_VALUE;
+        File choice = null;
+        for (File file : f1) {
+            if (file.lastModified() > lastMod) {
+                choice = file;
+                lastMod = file.lastModified();
+            }
+        }
+        Log.d(TAG,"Last Modified: "+choice.toString());
+        return choice;
+    }
     
+	
+	public String readMAC() throws IOException
+	{
+		XmlPullParserHandler Messages = new XmlPullParserHandler();
+		Item OiMsg = new Item(getApplicationContext());
+		String OiMsgFormat="";
+		File file = new File(Environment.getExternalStorageDirectory().toString()+"/Oi1.1"+"Sent");
+		try{
+		FileInputStream fin = new FileInputStream(file);
+		OiMessages=Messages.parse(fin);
+		fin.close();
+		}catch(IOException e){
+			e.printStackTrace();
+		}
+		
+		for (int i=0; i<OiMessages.size();i=i+1){
+			OiMsg=OiMessages.get(i);
+			OiMsgFormat=OiMsg.getMessage();
+			Log.v("Message destination\n",OiMsg.nameReceiver);
+		
+		}
+		
+		return OiMsg.nameReceiver;
+	}
+	
+	public String getWFDMacAddress(){
+	    try {
+	        List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+	        for (NetworkInterface ntwInterface : interfaces) {
+
+	            if (ntwInterface.getName().equalsIgnoreCase("p2p0")) {
+	                byte[] byteMac = ntwInterface.getHardwareAddress();
+	                if (byteMac==null){
+	                    return null;
+	                }
+	                StringBuilder strBuilder = new StringBuilder();
+	                for (int i=0; i<byteMac.length; i++) {
+	                    strBuilder.append(String.format("%02x:", byteMac[i]));
+	                }
+
+	                if (strBuilder.length()>0){
+	                    strBuilder.deleteCharAt(strBuilder.length()-1);
+	                }
+
+	                return strBuilder.toString();
+	            }
+
+	        }
+	    } catch (Exception e) {
+	        Log.d(TAG, e.getMessage());
+	    }
+	    return null;
+	}
     
 
     /**
@@ -564,19 +769,17 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 
                     @Override
                     public void onSuccess() {
-                        Toast.makeText(MainActivity.this, "Discovery Initiated",
-                                Toast.LENGTH_SHORT).show();
-                        startRegistrationAndDiscovery();
-                        String macAddrPeer=getPeerMacAdd();
-                        List<GetMessages> msginstorage=GetMessages.getMsg();
-                        List<Integer> lom=OiRouter.getListMsg(myDev, newRecord, macAddrPeer, msginstorage);
-                        Log.e(TAG, "Message in storage: "+lom.toString());
+                        Toast.makeText(MainActivity.this, "Discovery Initiated",Toast.LENGTH_SHORT).show();
+//                        startRegistrationAndDiscovery();
+//                        String macAddrPeer=getPeerMacAdd();
+//                        List<GetMessages> msginstorage=GetMessages.getMsg();
+//                        List<Integer> lom=OiRouter.getListMsg(myDev, newRecord, macAddrPeer, msginstorage);
+//                        Log.e(TAG, "Message in storage: "+lom.toString());
                     }
 
                     @Override
                     public void onFailure(int reasonCode) {
-                        Toast.makeText(MainActivity.this, "Discovery Failed : " + reasonCode,
-                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Discovery Failed : " + reasonCode,Toast.LENGTH_SHORT).show();
                     }
                 });
                 return true;
@@ -588,7 +791,7 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
     @Override
     public void showDetails(WifiP2pDevice device) {
         DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager()
-                .findFragmentById(R.id.frag_detail);
+        		.findFragmentById(R.id.frag_detail);
         fragment.showDetails(device);
 
     }
@@ -600,6 +803,10 @@ public class MainActivity extends Activity implements ChannelListener, DeviceAct
 
             @Override
             public void onSuccess() {
+            	Log.d(TAG, "Connecting...");
+            	
+            	
+            	
             	
             }
 
