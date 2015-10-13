@@ -19,5 +19,6 @@
     <string name="edit_message">Say Oi to a friend! </string>
     <string name="pick_friend_email">Enter e-mail</string>
     <string name="pick_friend">Send To</string>
+    <string name="read">Read</string>
     
 </resources>
