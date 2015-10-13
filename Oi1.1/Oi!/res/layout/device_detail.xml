@@ -3,14 +3,11 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal"
     android:layout_width="match_parent"
-    android:layout_height="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginLeft="5dp"
     android:visibility="gone">
             
-            <Button
-                android:id="@+id/btn_disconnect"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/disconnect_peer_button" />
+   <!--          
             <EditText 
                 android:id="@+id/edit_message"
         		android:layout_width="fill_parent"
@@ -46,12 +43,21 @@
                 android:text="@string/get_xml"
                 
                 android:visibility="gone" />
+                
+                 -->
+                 
+            <Button
+                android:id="@+id/btn_disconnect"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@+id/btn_xml"
+                android:text="@string/disconnect_peer_button" />
         
         <TextView
             android:id="@+id/device_address"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" 
-            android:layout_below="@+id/btn_start_client"/>
+            android:layout_below="@+id/btn_disconnect"/>
         <TextView
             android:id="@+id/device_info"
             android:layout_width="match_parent"
@@ -69,13 +75,27 @@
             android:layout_below="@+id/group_owner"/>
         <TextView
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:layout_margin="5dp"
+            android:layout_height="wrap_content"
             android:layout_below="@+id/group_ip"
             android:textColor="@android:color/white"
             android:id="@+id/status_text">
         </TextView>
+        <ScrollView
+    		android:id="@+id/SCROLLER_ID"
+    		android:layout_width="fill_parent"
+    		android:layout_height="wrap_content"
+    		android:scrollbars="vertical"
+    		android:fillViewport="true"
+    		android:layout_below="@+id/status_text">
+    		
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            
+            android:textColor="@android:color/white"
+            android:id="@+id/receivedMsg">
+        </TextView>
+        </ScrollView>>
     
     </RelativeLayout>
    
