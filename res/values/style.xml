@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="OthersText">
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">#121459</item>
+    </style>
+
+    <style name="MeText">
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">#285555</item>
+    </style>
+
+</resources>

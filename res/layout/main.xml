@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:id="@+id/linearLayout1"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        
+        <fragment
+            class="com.copelabs.oiui.DeviceListFragment"
+            android:id="@+id/frag_list"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_alignParentTop="true">
+            
+            <!-- Preview: layout=@layout/row_devices -->
+        </fragment>
+        
+        <Spinner
+      	    	android:id="@+id/contactSpinner"
+      	    	android:layout_width="match_parent"
+      	    	android:layout_height="50dp"
+      	    	android:layout_below="@+id/local_name"
+      	    	android:gravity="center"/>
+        <LinearLayout 
+  			android:focusable="true"
+  			android:focusableInTouchMode="true" 
+  			android:layout_width="0px"
+  			android:layout_height="0px" />
+        <EditText 
+                android:id="@+id/edit_msg"
+        		android:layout_width="240dp"
+        		android:layout_height="wrap_content"
+        		android:hint="@string/edit_message"   
+        		android:layout_below="@+id/contactSpinner"
+        		android:inputType="textAutoComplete"
+        		android:layout_marginStart="2dp"
+        		android:layout_marginLeft="2dp"
+        		 >
+      	</EditText>
+      	<Button
+          		 android:id="@+id/sendTo"
+          		 android:layout_width="match_parent"
+          		 android:layout_height="wrap_content"
+          		 android:layout_alignTop="@+id/edit_msg"
+          		 android:layout_alignBottom="@+id/edit_msg"
+           		 android:layout_toEndOf="@+id/edit_msg"
+           		 android:layout_toRightOf="@+id/edit_msg"
+           		 android:textStyle="bold"
+           		 android:text="@string/pick_friend"
+           		 />
+
+        <fragment
+            android:id="@+id/frag_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:layout_below="@+id/edit_msg"
+            class="com.copelabs.oiui.DeviceMessageFragment" />
+        <TextView 
+            android:id="@+id/local_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/holo_green_dark"
+            android:layout_below="@+id/frag_list"
+            android:text="Local Device Name:"/>
+         
+    </RelativeLayout>
